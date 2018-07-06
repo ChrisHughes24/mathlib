@@ -1163,6 +1163,13 @@ theorem le_max_of_mem {s : finset α} {a b : α} (h₁ : a ∈ s) (h₂ : b ∈ 
 by rcases @le_sup (with_bot α) _ _ _ _ _ _ _ h₁ _ rfl with ⟨b', hb, ab⟩;
    cases h₂.symm.trans hb; assumption
 
+theorem max_eq_none {s : finset α} : s.max = none ↔ s = ∅ :=
+⟨λ h, classical.by_contradiction (λ hs, let ⟨a, ha⟩ := exists_mem_of_ne_empty hs in 
+  let ⟨b, hb⟩ := max_of_mem ha in
+  by rw option.mem_def.1 hb at h;
+  exact option.no_confusion h),
+λ h, by simp [h]⟩
+
 protected def min : finset α → option α :=
 fold (option.lift_or_get min) none some
 
@@ -1196,6 +1203,13 @@ finset.induction_on s (by simp) $
 theorem le_min_of_mem {s : finset α} {a b : α} (h₁ : b ∈ s) (h₂ : a ∈ s.min) : a ≤ b :=
 by rcases @inf_le (with_top α) _ _ _ _ _ _ _ h₁ _ rfl with ⟨b', hb, ab⟩;
    cases h₂.symm.trans hb; assumption
+
+theorem min_eq_none {s : finset α} : s.min = none ↔ s = ∅ :=
+⟨λ h, classical.by_contradiction (λ hs, let ⟨a, ha⟩ := exists_mem_of_ne_empty hs in 
+  let ⟨b, hb⟩ := min_of_mem ha in
+  by rw option.mem_def.1 hb at h;
+  exact option.no_confusion h),
+λ h, by simp [h]⟩
 
 end max_min
 
