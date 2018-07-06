@@ -6,7 +6,7 @@ Authors: Chris Hughes
 Theory of univariate polynomials, represented as finsupps, ℕ →₀ α, with α a comm_semiring
 -/
 
-import data.finsupp algebra.euclidean_domain
+import data.finsupp algebra.euclidean_domain data.option
 
 open finsupp finset lattice
 
@@ -244,7 +244,7 @@ instance monic.decidable : decidable (monic p) :=
 by unfold monic; apply_instance
 
 @[simp] lemma degree_zero : degree (0 : polynomial α) = ⊥ := rfl
-
+ 
 lemma degree_eq_bot : degree p = ⊥ ↔ p = 0 :=
 ⟨λ h, by rw [degree, ← max_eq_sup_with_bot] at h;
   exact support_eq_empty.1 (max_eq_none.1 h),
@@ -302,7 +302,7 @@ lemma degree_add_le (p q : polynomial α) : degree (p + q) ≤ max (degree p) (d
 calc degree (p + q) = ((p + q).support).sup some : rfl
   ... ≤ (p.support ∪ q.support).sup some : sup_mono support_add
   ... = p.support.sup some ⊔ q.support.sup some : sup_union
-  ... = _ : with_bot.sup_with_bot_eq_max _ _
+  ... = _ : with_bot.sup_eq_max _ _
 
 @[simp] lemma leading_coeff_zero : leading_coeff (0 : polynomial α) = 0 := rfl
 
@@ -346,7 +346,7 @@ finset.induction_on s (by simp [finsupp.support_zero]) $
   assume a s has ih,
   calc degree (sum (insert a s) f) ≤ max (degree (f a)) (degree (s.sum f)) :
     by rw sum_insert has; exact degree_add_le _ _
-  ... ≤ _ : by rw [sup_insert, with_bot.sup_with_bot_eq_max];
+  ... ≤ _ : by rw [sup_insert, with_bot.sup_eq_max];
     exact max_le_max (le_refl _) ih
 
 lemma degree_mul_le (p q : polynomial α) : degree (p * q) ≤ degree p + degree q :=
@@ -371,6 +371,10 @@ end
 
 @[simp] lemma leading_coeff_C (a : α) : leading_coeff (C a) = a :=
 leading_coeff_monomial _ _
+
+@[simp] lemma leading_coeff_X : leading_coeff (X : polynomial α) = 1 := leading_coeff_monomial _ _
+
+@[simp] lemma leading_coeff_one : leading_coeff (1 : polynomial α) = 1 := leading_coeff_monomial _ _
 
 @[simp] lemma monic_one : monic (1 : polynomial α) := leading_coeff_C _
 
@@ -495,117 +499,96 @@ calc degree (p - q) = degree (erase (nat_degree q) p + -erase (nat_degree q) q) 
   : degree_neg (erase (nat_degree q) q) ▸ degree_add_le _ _
 ... < degree p : max_lt_iff.2 ⟨hd' ▸ degree_erase_lt hp0, hd.symm ▸ degree_erase_lt hq0⟩
 
-def with_bot_measure : with_bot ℕ → ℕ
-| none := 0
-| (some n) := n + 1
+def degree_lt_wf : well_founded (λ p q : polynomial α, degree p < degree q) :=
+inv_image.wf degree (with_bot.well_founded_lt (nat.lt_wf))
 
-lemma with_bot_measure_lt_iff_lt : ∀ {a b : with_bot ℕ},
-  degree p < degree q ↔ with_bot_measure (degree p) < with_bot_measure (degree q)
-| none none := dec_trivial
-
-lemma degree_wf : well_founded (λ p q : polynomial α, degree p < degree q) :=
-well_founded.intro begin
-  assume p,
-
+lemma ne_zero_of_ne_zero_of_monic (hp : p ≠ 0) (hq : monic q) : q ≠ 0 
+| h := begin 
+  rw [h, monic.def, leading_coeff_zero] at hq,
+  rw [← mul_one p, ← C_1, ← hq, C_0, mul_zero] at hp,
+  exact hp rfl
 end
 
-lemma div_wf_lemma (h : degree q ≤ degree p ∧ p ≠ 0 ∧ q ≠ 0) (hq : monic q) :
+lemma div_wf_lemma (h : degree q ≤ degree p ∧ p ≠ 0) (hq : monic q) :
   degree (p - monomial (nat_degree p - nat_degree q) (leading_coeff p) * q) < degree p :=
-have hp : leading_coeff p ≠ 0 := mt leading_coeff_eq_zero.1 h.2.1, 
+have hp : leading_coeff p ≠ 0 := mt leading_coeff_eq_zero.1 h.2, 
 have hpq : leading_coeff (monomial (nat_degree p - nat_degree q) 
     (leading_coeff p)) * leading_coeff q ≠ 0,
   by rwa [leading_coeff_monomial, monic.def.1 hq, mul_one],
 if h0 : p - monomial (nat_degree p - nat_degree q) (leading_coeff p) * q = 0
-  then h0.symm ▸ (lt_of_not_ge $ mt le_bot_iff.1 (mt degree_eq_bot.1 h.2.1))
-  else begin 
-    refine degree_sub_lt _ h.2 _,
-    rw [degree_mul_eq' hpq, degree_monomial _ hp],
-  rw leading_coeff_mul,
- end
-      
-      
+then h0.symm ▸ (lt_of_not_ge $ mt le_bot_iff.1 (mt degree_eq_bot.1 h.2))
+else
+  have hq0 : q ≠ 0 := ne_zero_of_ne_zero_of_monic h.2 hq,
+  have hlt : nat_degree q ≤ nat_degree p := with_bot.coe_le_coe.1 
+    (by rw [← degree_eq_nat_degree h.2, ← degree_eq_nat_degree hq0];
+    exact h.1),
+  degree_sub_lt 
+  (by rw [degree_mul_eq' hpq, degree_monomial _ hp, degree_eq_nat_degree h.2,
+      degree_eq_nat_degree hq0, ← with_bot.coe_add, nat.sub_add_cancel hlt])
+  h.2
+  (by rw [leading_coeff_mul hpq, leading_coeff_monomial, monic.def.1 hq, mul_one])
+
 def div_mod_by_monic_aux : Π (p : polynomial α) {q : polynomial α}, 
   monic q → polynomial α × polynomial α
 | p := λ q hq, if h : degree q ≤ degree p ∧ p ≠ 0 then
-have h : _ := div_wf_lemma h hq,
 let z := monomial (nat_degree p - nat_degree q) (leading_coeff p) in
+have wf : _ := div_wf_lemma h hq,
 let dm := div_mod_by_monic_aux (p - z * q) hq in
 ⟨z + dm.1, dm.2⟩
-else if degree p = 0 ∧ degree q = 0
-  then ⟨C (leading_coeff p), 0⟩
 else ⟨0, p⟩
-using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf degree⟩]}
+using_well_founded {dec_tac := tactic.assumption, 
+  rel_tac := λ _ _, `[exact ⟨_, degree_lt_wf⟩]}
 
 /-- `div_by_monic` gives the quotient of `p` by a monic polynomial `q`. -/
 def div_by_monic (p q : polynomial α) : polynomial α :=
 if hq : monic q then (div_mod_by_monic_aux p hq).1 else 0
 
-/-- `mod_by_monic` gives the remainder of `p` by a monic polynomial `q` -/
+/-- `mod_by_monic` gives the remainder of `p` by a monic polynomial `q`. -/
 def mod_by_monic (p q : polynomial α) : polynomial α :=
 if hq : monic q then (div_mod_by_monic_aux p hq).2 else p
 
-notation p `/ₘ` q := div_by_monic p q
+infixl  ` /ₘ ` : 70 := div_by_monic
 
-notation p `%ₘ` q := mod_by_monic p q
+infixl ` %ₘ ` : 70 := mod_by_monic
 
 lemma degree_mod_by_monic_lt : ∀ (p : polynomial α) {q : polynomial α} (hq : monic q) 
-  (hq0 : 0 < degree q), degree (mod_by_monic p q) < degree q
-| p := λ q hq hq0, if h : degree q ≤ degree p ∧ 0 < degree p then 
-have wf : _ := div_wf_lemma h hq,
-have degree (mod_by_monic (p - monomial (degree p - degree q) 
-  (leading_coeff p) * q) q) < degree q := 
-    degree_mod_by_monic_lt (p - monomial (degree p - degree q) (leading_coeff p) * q) 
-    hq hq0,
-begin
-  unfold mod_by_monic at this ⊢,
-  unfold div_mod_by_monic_aux,
-  rw dif_pos hq at this ⊢,
-  rw if_pos h,
-  exact this
-end
-else 
-have h₁ : ¬ (degree p = 0 ∧ degree q = 0) := λ h₁, by simpa [h₁.2, lt_irrefl] using hq0,
-begin
-  unfold mod_by_monic div_mod_by_monic_aux,
-  rw [dif_pos hq, if_neg h, if_neg h₁],
-  cases not_and_distrib.1 h with h₂ h₂,
-  { exact lt_of_not_ge h₂ },
-  { simpa [nat.le_zero_iff.1 (le_of_not_gt h₂)] }
-end
-using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf degree⟩]}
-
-@[simp] lemma mod_by_monic_one : ∀ p : polynomial α, mod_by_monic p 1 = 0
-| p := if hp0 : 0 < degree p then 
-have hd : degree 1 ≤ degree p ∧ 0 < degree p := ⟨by rw @degree_one α _ _; exact nat.zero_le _, hp0⟩,
-have wf : degree (p + -monomial (degree p) (leading_coeff p)) < degree p :=
-  by have := div_wf_lemma hd monic_one; simpa using this,
-have h : _ := mod_by_monic_one (p - monomial (degree p - degree (1 : polynomial α)) (leading_coeff p) * 1),
-begin
-  unfold mod_by_monic div_mod_by_monic_aux,
-  rw [dif_pos monic_one, if_pos hd],
-  rwa [mod_by_monic, dif_pos monic_one] at h
-end else 
-have hp0' : degree p = 0 := not_not.1 $ mt nat.pos_of_ne_zero hp0,
-begin
-  unfold mod_by_monic div_mod_by_monic_aux,
-  simp [hp0, hp0']
-end
-using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf degree⟩]}
-
-lemma degree_mod_by_monic_lt_or_eq_zero (p : polynomial α) {q : polynomial α} (hq : monic q) 
-  : degree (mod_by_monic p q) < degree q ∨ mod_by_monic p q = 0 :=
-if hq0 : 0 < degree q then or.inl $ degree_mod_by_monic_lt p hq hq0
-else have hq0 : degree q = 0 := not_not.1 $ mt nat.pos_of_ne_zero hq0,
-have hq : q = 1 :=
-  by rw [eq_C_of_degree_eq_zero hq0, ← hq0, (show q (degree q) = 1, from hq)]; refl,
-by subst hq;
-  simp [mod_by_monic_one]
+  (hq0 : q ≠ 0), degree (p %ₘ q) < degree q
+| p := λ q hq hq0, 
+if h : degree q ≤ degree p ∧ p ≠ 0 then 
+  have wf : _ := div_wf_lemma ⟨h.1, h.2⟩ hq,
+  have degree (mod_by_monic (p - monomial (nat_degree p - nat_degree q) 
+    (leading_coeff p) * q) q) < degree q := 
+      degree_mod_by_monic_lt (p - monomial (nat_degree p - nat_degree q) (leading_coeff p) * q) 
+      hq hq0,
+  begin
+    unfold mod_by_monic at this ⊢,
+    unfold div_mod_by_monic_aux,
+    rw dif_pos hq at this ⊢,
+    rw if_pos h,
+    exact this
+  end
+else
+  or.cases_on (not_and_distrib.1 h) begin 
+    unfold mod_by_monic div_mod_by_monic_aux,
+    rw [dif_pos hq, if_neg h],
+    exact lt_of_not_ge,
+  end
+  begin
+    assume hp,
+    unfold mod_by_monic div_mod_by_monic_aux,
+    rw [dif_pos hq, if_neg h, not_not.1 hp],
+    exact lt_of_le_of_ne bot_le
+      (ne.symm (mt degree_eq_bot.1 hq0)),
+  end
+using_well_founded {dec_tac := tactic.assumption, 
+  rel_tac := λ _ _, `[exact ⟨_, degree_lt_wf⟩]}
 
 lemma mod_by_monic_eq_sub_mul_div : ∀ (p : polynomial α) {q : polynomial α} (hq : monic q),
   mod_by_monic p q = p - q * div_by_monic p q
-| p := λ q hq, if h : degree q ≤ degree p ∧ 0 < degree p then
+| p := λ q hq, if h : degree q ≤ degree p ∧ p ≠ 0 then
   have wf : _ := div_wf_lemma h hq,
-  have ih : _ := mod_by_monic_eq_sub_mul_div (p - monomial (degree p - degree q) (leading_coeff p) * q) hq,
+  have ih : _ := mod_by_monic_eq_sub_mul_div 
+    (p - monomial (nat_degree p - nat_degree q) (leading_coeff p) * q) hq,
   begin
   unfold mod_by_monic div_by_monic div_mod_by_monic_aux,
   rw [dif_pos hq, if_pos h],
@@ -613,57 +596,100 @@ lemma mod_by_monic_eq_sub_mul_div : ∀ (p : polynomial α) {q : polynomial α} 
   refine ih.trans _,
   simp [mul_add, add_mul, mul_comm, hq, h, div_by_monic]
 end
-else if h₁ : degree p = 0 ∧ degree q = 0 then 
-have hq0 : q 0 = 1 := h₁.2 ▸ hq,
-begin
+else begin
   unfold mod_by_monic div_by_monic div_mod_by_monic_aux,
-  rw [dif_pos hq, if_neg h, if_pos h₁],
-  rw [eq_C_of_degree_eq_zero h₁.1, eq_C_of_degree_eq_zero h₁.2] at *,
-  conv {to_rhs, congr, rw eq_C_of_degree_eq_zero h₁.1},
-  simp [hq0, leading_coeff, h₁.1, h₁.2, h, hq, lt_irrefl, C_apply],
+  rw [dif_pos hq, if_neg h, dif_pos hq, if_neg h],
+  simp
 end
-else begin 
-  unfold mod_by_monic div_by_monic div_mod_by_monic_aux,
-  simp [hq, h, h₁]
-end
-using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf degree⟩]}
+using_well_founded {dec_tac := tactic.assumption, 
+  rel_tac := λ _ _, `[exact ⟨_, degree_lt_wf⟩]}
+
+lemma monic_zero (h : monic (0 : polynomial α)) : (∀ p q : polynomial α, p = q) ∧ (∀ a b : α, a = b) :=
+by rw [monic.def, leading_coeff_zero] at h;
+  exact ⟨λ p q, by rw [← mul_one p, ← mul_one q, ← C_1, ← h, C_0, mul_zero, mul_zero],
+    λ a b, by rw [← mul_one a, ← mul_one b, ← h, mul_zero, mul_zero]⟩ 
 
 lemma mod_by_monic_add_div (p : polynomial α) {q : polynomial α} (hq : monic q) : 
   mod_by_monic p q + q * div_by_monic p q = p := eq_sub_iff_add_eq.1 (mod_by_monic_eq_sub_mul_div p hq)
 
-lemma degree_div_by_monic_lt (p : polynomial α) {q : polynomial α} (hq : monic q) 
-  (hq0 : 0 < degree q) (hp0 : 0 < degree p) : degree (div_by_monic p q) < degree p :=
-if hdp : div_by_monic p q = 0 then by simpa [hdp] else
-have h₁ : leading_coeff q * leading_coeff (div_by_monic p q) ≠ 0 :=
-by rw [monic.def.1 hq, one_mul];
-  exact mt leading_coeff_eq_zero.1 hdp,
-have h₂ : degree (mod_by_monic p q) < degree (q * div_by_monic p q) :=
-by rw degree_mul_eq' h₁;
-  exact calc degree (mod_by_monic p q) < degree q : degree_mod_by_monic_lt p hq hq0 
-    ... ≤ degree q + _ : nat.le_add_right _ _,
+@[simp] lemma zero_mod_by_monic (p : polynomial α) : 0 %ₘ p = 0 :=
 begin
-  conv {to_rhs, rw ← mod_by_monic_add_div p hq},
-  rw [degree_add_eq_of_degree_lt h₂, degree_mul_eq' h₁],
-  exact (lt_add_iff_pos_left _).2 hq0,
+  unfold mod_by_monic div_mod_by_monic_aux,
+  split_ifs;
+  simp * at *
 end
 
-lemma dvd_iff_mod_by_monic_eq_zero (hq : monic q) : mod_by_monic p q = 0 ↔ q ∣ p :=
+@[simp] lemma zero_div_by_monic (p : polynomial α) : 0 /ₘ p = 0 :=
+begin
+  unfold div_by_monic div_mod_by_monic_aux,
+  split_ifs;
+  simp * at *
+end
+
+@[simp] lemma mod_by_monic_zero (p : polynomial α) : p %ₘ 0 = p :=
+if h : monic (0 : polynomial α) then (monic_zero h).1 _ _ else
+begin
+  unfold mod_by_monic div_mod_by_monic_aux,
+  split_ifs;
+  simp * at *
+end
+
+@[simp] lemma div_by_monic_zero (p : polynomial α) : p /ₘ 0 = 0 :=
+if h : monic (0 : polynomial α) then (monic_zero h).1 _ _ else
+begin
+  unfold div_by_monic div_mod_by_monic_aux,
+  split_ifs;
+  simp * at *
+end
+
+lemma with_bot.coe_lt_coe {a b : ℕ} : (a : with_bot ℕ) < b ↔ a < b := with_bot.some_lt_some
+
+lemma with_bot.bot_lt_some (a : ℕ) : (⊥ : with_bot ℕ) < some a := lt_of_le_of_ne bot_le (λ h, option.no_confusion h)
+
+lemma degree_div_by_monic_le (p : polynomial α) {q : polynomial α} (hq : monic q) 
+  (hp0 : p ≠ 0) : degree (p /ₘ q) ≤ degree p :=
+have hq0 : q ≠ 0 := ne_zero_of_ne_zero_of_monic hp0 hq,
+if h : degree q ≤ degree p
+then
+  have hdiv0 : p /ₘ q ≠ 0 := λ hpq, not_lt_of_ge h $
+  by rw [← mod_by_monic_add_div p hq, hpq, mul_zero, add_zero];
+    exact degree_mod_by_monic_lt p hq hq0,
+  have hlc : leading_coeff q * leading_coeff (p /ₘ q) ≠ 0 :=
+    by rwa [monic.def.1 hq, one_mul, ne.def, leading_coeff_eq_zero],
+  have hmod : degree (p %ₘ q) < degree (q * (p /ₘ q)) :=
+    calc degree (p %ₘ q) < degree q : degree_mod_by_monic_lt _ hq hq0
+    ... ≤ _ : by rw [degree_mul_eq' hlc, degree_eq_nat_degree hq0,
+        degree_eq_nat_degree hdiv0, ← with_bot.coe_add, with_bot.coe_le_coe];
+      exact nat.le_add_right _ _,
+  begin
+    conv {to_rhs, rw ← mod_by_monic_add_div p hq},
+    rw [degree_add_eq_of_degree_lt hmod, degree_mul_eq' hlc,
+      degree_eq_nat_degree hq0, degree_eq_nat_degree hdiv0],
+    exact with_bot.some_le_some.2 (nat.le_add_left _ _),
+  end
+else
+  by unfold div_by_monic div_mod_by_monic_aux;
+    simp [dif_pos hq, h]
+
+lemma dvd_iff_mod_by_monic_eq_zero (hq : monic q) : p %ₘ q = 0 ↔ q ∣ p :=
 ⟨λ h, by rw [← mod_by_monic_add_div p hq, h, zero_add];
   exact dvd_mul_right _ _,
-λ h, or.cases_on (degree_mod_by_monic_lt_or_eq_zero p hq) 
-(λ hlt, let ⟨r, hr⟩ := exists_eq_mul_right_of_dvd h in
-have hr : mod_by_monic p q = q * (r - div_by_monic p q) :=
-  by rwa [← mod_by_monic_add_div p hq, ← eq_sub_iff_add_eq, ← mul_sub] at hr,
-have r - div_by_monic p q = 0 := classical.by_contradiction
-  (λ h,
-  have hlc : leading_coeff q * leading_coeff (r - div_by_monic p q) ≠ 0 :=
-    by rwa [monic.def.1 hq, one_mul, ne.def, leading_coeff_eq_zero],
-  have hq : degree (q * (r - div_by_monic p q)) = 
-    degree q + degree (r - div_by_monic p q) :=
-      by rw degree_mul_eq' hlc,
-  by rw [hr, hq] at hlt;
-    exact not_lt_of_ge (nat.le_add_right _ _) hlt),
-by rwa [this, mul_zero] at hr) id⟩
+λ h, if hq0 : q = 0 then by rw hq0 at hq; exact (monic_zero hq).1 _ _ 
+  else 
+  let ⟨r, hr⟩ := exists_eq_mul_right_of_dvd h in
+  by_contradiction (λ hpq0,
+  have hmod : p %ₘ q = q * (r - p /ₘ q) :=
+    by rw [mod_by_monic_eq_sub_mul_div _ hq, mul_sub, ← hr],
+  have degree (q * (r - p /ₘ q)) < degree q :=
+    hmod ▸ degree_mod_by_monic_lt _ hq hq0,
+  have hrpq0 : leading_coeff (r - p /ₘ q) ≠ 0 := 
+    λ h, hpq0 $ leading_coeff_eq_zero.1
+      (by rw [hmod, leading_coeff_eq_zero.1 h, mul_zero, leading_coeff_zero]),
+  have hlc : leading_coeff q * leading_coeff (r - p /ₘ q) ≠ 0 :=
+    by rwa [monic.def.1 hq, one_mul],
+  by rw [degree_mul_eq' hlc, degree_eq_nat_degree hq0,
+      degree_eq_nat_degree (mt leading_coeff_eq_zero.2 hrpq0)] at this;
+    exact not_lt_of_ge (nat.le_add_right _ _) (with_bot.some_lt_some.1 this))⟩
 
 end comm_ring
 
@@ -678,31 +704,37 @@ instance : nonzero_comm_ring (polynomial α) :=
       ... = 1 : eval_C,
   ..polynomial.comm_ring }
 
+instance with_bot.has_one : has_one (with_bot ℕ) := ⟨(1 : ℕ)⟩
+
 @[simp] lemma degree_one : degree (1 : polynomial α) = (0 : with_bot ℕ) :=
 degree_C (show (1 : α) ≠ 0, from zero_ne_one.symm)
 
 @[simp] lemma not_monic_zero : ¬monic (0 : polynomial α) :=
 by simp [monic, zero_ne_one]
 
-lemma degree_X : degree (X : polynomial α) = 1 := 
+lemma ne_zero_of_monic (h : monic p) : p ≠ 0 := 
+λ h₁, @not_monic_zero α _ _ (h₁ ▸ h)
+
+@[simp] lemma degree_X : degree (X : polynomial α) = 1 := 
 begin
   unfold X monomial degree single finsupp.support,
   rw if_neg (zero_ne_one).symm,
-  simp [sup],
+  refl
 end
 
 lemma degree_X_sub_C (a : α) : degree (X - C a) = 1 :=
 begin 
   rw [sub_eq_add_neg, add_comm, ← @degree_X α],
-  exact degree_add_eq_of_degree_lt (by simp [degree_X, degree_neg, degree_C, nat.succ_pos]) 
+  by_cases ha : a = 0,
+  { simp [ha] },
+  exact degree_add_eq_of_degree_lt (by rw [degree_X, degree_neg, degree_C ha]; exact dec_trivial) 
 end
 
 lemma monic_X_sub_C (a : α) : monic (X - C a) :=
-begin
-  unfold monic leading_coeff,
-  rw [degree_X_sub_C, sub_eq_add_neg, add_apply, X, C, monomial_apply, neg_apply, monomial_apply],
-  split_ifs; simp * at *
-end
+have degree (-C a) < degree (X : polynomial α) :=
+if ha : a = 0 then by simp [ha]; exact dec_trivial else by simp [degree_C ha]; exact dec_trivial,
+by unfold monic;
+  rw [sub_eq_add_neg, add_comm, leading_coeff_add_of_degree_lt this, leading_coeff_X]
 
 lemma root_X_sub_C : is_root (X - C a) b ↔ a = b := 
 by rw [is_root.def, eval_sub, eval_X, eval_C, sub_eq_zero_iff_eq, eq_comm]
@@ -712,8 +744,9 @@ have h : (mod_by_monic p (X - C a)).eval a = p.eval a :=
   by rw [mod_by_monic_eq_sub_mul_div _ (monic_X_sub_C a), eval_sub, eval_mul, 
     eval_sub, eval_X, eval_C, sub_self, zero_mul, sub_zero],
 have degree (mod_by_monic p (X - C a)) < 1 := 
-  degree_X_sub_C a ▸ degree_mod_by_monic_lt p (monic_X_sub_C a) ((degree_X_sub_C a).symm ▸ nat.succ_pos _),
-have degree (mod_by_monic p (X - C a)) = 0 := nat.eq_zero_of_le_zero (nat.le_of_lt_succ this),
+  degree_X_sub_C a ▸ degree_mod_by_monic_lt p (monic_X_sub_C a) ((degree_X_sub_C a).symm ▸ 
+    ne_zero_of_monic (monic_X_sub_C _)),
+have degree (mod_by_monic p (X - C a)) = 0 := begin end,
 begin
   rw [eq_C_of_degree_eq_zero this, eval_C] at h,
   rw [eq_C_of_degree_eq_zero this, h]
