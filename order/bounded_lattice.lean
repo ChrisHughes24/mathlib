@@ -410,9 +410,6 @@ have acc_bot : acc ((<) : with_bot α → with_bot α → Prop) ⊥ :=
   from λ b ih hba, acc.intro _ (λ c, option.rec_on c (λ _, acc_bot) 
     (λ c hc, ih _ (some_lt_some.1 hc) (lt_trans hc hba)))))))⟩
 
-lemma sup_eq_max [decidable_linear_order α] (a b : with_bot α) : a ⊔ b = max a b :=
-le_antisymm (sup_le (le_max_left _ _) (le_max_right _ _)) (max_le le_sup_left le_sup_right)
-
 end with_bot
 
 --TODO(Mario): Construct using order dual on with_bot
@@ -544,8 +541,5 @@ have acc_some : ∀ a : α, acc ((<) : with_top α → with_top α → Prop) (so
     (λ c hc, acc.intro _ (ih _ (some_lt_some.1 hc))))),
 ⟨λ a, option.rec_on a (acc.intro _ (λ y, option.rec_on y (λ h, (lt_irrefl _ h).elim)
   (λ _ _, acc_some _))) acc_some⟩
-
-lemma inf_eq_min [decidable_linear_order α] (a b : with_top α) : a ⊓ b = min a b :=
-le_antisymm (le_min inf_le_left inf_le_right) (le_inf (min_le_left _ _) (min_le_right _ _))
 
 end with_top
