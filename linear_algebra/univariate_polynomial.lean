@@ -6,7 +6,7 @@ Authors: Chris Hughes
 Theory of univariate polynomials, represented as finsupps, ℕ →₀ α, with α a comm_semiring
 -/
 
-import data.finsupp algebra.euclidean_domain data.option
+import data.finsupp algebra.euclidean_domain
 
 open finsupp finset lattice
 
