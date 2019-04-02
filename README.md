@@ -35,12 +35,6 @@ not specific to mathlib.
 ``` shell
 curl https://raw.githubusercontent.com/leanprover-community/mathlib/master/scripts/remote-install-update-mathlib.sh -sSf | sh
 ```
-
-*Any platform*: in the release section of this page, download
-`mathlib-scripts-###-###-###.tar.gz`, expand it and run `setup-dev-scripts.sh`.
-
-### Fetch mathlib binaries
-
 In a terminal, in the directory of a project depending on mathlib, run
 the following:
 
