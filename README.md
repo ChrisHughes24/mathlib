@@ -2,11 +2,6 @@
 
 [![Build Status](https://travis-ci.org/leanprover-community/mathlib.svg?branch=master)](https://travis-ci.org/leanprover-community/mathlib)
 
-[![Mergify Status][mergify-status]][mergify]
-
-[mergify]: https://mergify.io
-[mergify-status]: https://gh.mergify.io/badges/:owner/:repo.png?style=cut
-
 ## Lean standard library
 
 Besides [Lean's general documentation](https://leanprover.github.io/documentation/), the documentation of mathlib consists of:
@@ -19,11 +14,7 @@ Besides [Lean's general documentation](https://leanprover.github.io/documentatio
 - An explanation of [naming conventions](docs/naming.md) that is useful
   to find or contribute definitions and lemmas.
 - A [style guide](docs/style.md) for contributors
-- An outline of [how to contribute](docs/howto-contribute.md) to mathlib.
-- A tentative list of [work in progress](docs/wip.md) to make sure
-  efforts are not duplicated without collaboration.
-
-This repository also contains [extra Lean documentation](docs/extras.md)
+- An outline of [how to contribute](docs/howto-contribute.md) to mathlib..md)
 not specific to mathlib.
 
 ## Obtaining binaries
