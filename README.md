@@ -29,13 +29,6 @@ not specific to mathlib.
 ## Obtaining binaries
 
 ### Install the `update-mathlib` script
-
-*Linux/OS X/Cygwin/MSYS2/git bash*: run the following command in a terminal:
-
-``` shell
-curl https://raw.githubusercontent.com/leanprover-community/mathlib/master/scripts/remote-install-update-mathlib.sh -sSf | sh
-```
-
 *Any platform*: in the release section of this page, download
 `mathlib-scripts-###-###-###.tar.gz`, expand it and run `setup-dev-scripts.sh`.
 
