@@ -5,7 +5,7 @@
 [![Mergify Status][mergify-status]][mergify]
 
 [mergify]: https://mergify.io
-[mergify-status]: https://gh.mergify.io/badges/:owner/:repo.png?style=cut
+[mergify-status]: https://gh.mergify.io/badges/ChrisHughes24/mathlib.png?style=cut
 
 ## Lean standard library
 
