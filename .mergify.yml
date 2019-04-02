@@ -5,7 +5,27 @@ pull_request_rules:
       - "#changes-requested-reviews-by=0"
       - base=master
       - label=ready-to-merge
-      - -approved-reviews-by!=['avigad','rwbarton','digama0','cipher1024','ChrisHughes24','robertylewis','patrickmassot']
+      - approved-reviews-by=cipher1024
+    actions:
+      comment:
+        message: 'yay'
+  - name: automatic merge on CI success and review
+    conditions:
+      - status-success=continuous-integration/travis-ci/pr
+      - "#changes-requested-reviews-by=0"
+      - base=master
+      - label=ready-to-merge
+      - approved-reviews-by=rwbarton
+    actions:
+      comment:
+        message: 'yay'
+    - name: automatic merge on CI success and review
+    conditions:
+      - status-success=continuous-integration/travis-ci/pr
+      - "#changes-requested-reviews-by=0"
+      - base=master
+      - label=ready-to-merge
+      - approved-reviews-by=ChrisHughes24
     actions:
       comment:
         message: 'yay'
