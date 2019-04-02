@@ -41,13 +41,6 @@ curl https://raw.githubusercontent.com/leanprover-community/mathlib/master/scrip
 
 ### Fetch mathlib binaries
 
-In a terminal, in the directory of a project depending on mathlib, run
-the following:
-
-``` shell
-update-mathlib
-```
-
 The existing `_target/deps/mathlib` will be rewritten with a compiled
 version of mathlib.
 
