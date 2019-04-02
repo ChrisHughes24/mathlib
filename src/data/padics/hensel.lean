@@ -418,3 +418,4 @@ by refine ⟨soln _ _, eval_soln _ _, soln_dist_to_a_lt_deriv _ _, soln_deriv_no
    assumption
 
 lemma xyzzy : 1 = 1:= rfl
+lemma foobar : 1 = 1:= rfl
