@@ -30,18 +30,7 @@ not specific to mathlib.
 
 ### Install the `update-mathlib` script
 
-*Linux/OS X/Cygwin/MSYS2/git bash*: run the following command in a terminal:
-
-``` shell
-curl https://raw.githubusercontent.com/leanprover-community/mathlib/master/scripts/remote-install-update-mathlib.sh -sSf | sh
-```
-In a terminal, in the directory of a project depending on mathlib, run
-the following:
-
-``` shell
-update-mathlib
-```
-
+*Linux/OS X/Cygwin/MSYS2/git bash*: run the
 The existing `_target/deps/mathlib` will be rewritten with a compiled
 version of mathlib.
 
